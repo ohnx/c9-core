@@ -1,3 +1,14 @@
+ohnx's fork of the Cloud9 3.0 SDK for Plugin Development
+======================================
+
+After Cloud9 was bought by Amazon in 2016, development on [c9/core](https://github.com/c9/core) slowed down. At this point, it seems like development has stopped. I've been an avid user of Cloud9 since around 2014 and hate to see it go away, so I'd like to try to keep a fork maintained.
+
+At this point, I have no new features planned. I mainly want to fix things that break (luckily, nothing so far) and update some dependencies. I may also considering checking out the PR's on the upstream branch and merging them into this one.
+
+The original README is as follows:
+
+---
+
 Cloud9 3.0 SDK for Plugin Development
 ======================================
 
