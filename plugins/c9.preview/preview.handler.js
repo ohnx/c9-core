@@ -1,3 +1,6 @@
+/* I give up. This is my solution. */
+const fs = require('fs');
+
 define(function(require, exports, module) {
     "use strict";
     
@@ -139,7 +142,7 @@ define(function(require, exports, module) {
 
         function proxyCall() {
             return function(req, res, next) {
-                
+                /*
                 var path = req.params.path;
                 var url = req.proxyUrl + path;
                 if (req.user.code)
@@ -161,13 +164,15 @@ define(function(require, exports, module) {
                 
                 debug("proxy call %s", url);
                 try {
+                    console.log("Sending GET request for file", req.params.path);
                     httpModule.get({
                         path: parsedUrl.path,
                         hostname: parsedUrl.hostname,
                         port: parsedUrl.port,
                         headers: req.headers,
-                        rejectUnauthorized: !options.selfSignedSSL
+                        rejectUnauthorized: !options.selfSignedSSL,
                     }, function(request) {
+                        console.log("got a request module back for ", parsedUrl.path);
                         if (request.statusCode >= 400 || request.headers["content-type"] == "text/x-error")
                             handleError(request);
                         else if (isDir)
@@ -177,6 +182,7 @@ define(function(require, exports, module) {
                         else
                             serveFile(request);
                     }).on("error", function(err) {
+                        console.log("and i oop", err);
                         metrics.increment("preview.failed.error");
                         next(err); 
                     });
@@ -302,11 +308,105 @@ define(function(require, exports, module) {
                             entries: entries
                         }, next);
                     });
-                }
+                }*/
                 
+                let actual_path = '/home/c9/workspace' + req.params.path;
+                fs.stat(actual_path, function(err, stats) {
+                    if (err) {
+                        return next(new error.NotFound("File '" + actual_path + "' could not be found!"));
+                    }
+                    let file_ext = actual_path.split('.').pop();
+                    if (stats.isFile()) {
+                        if (file_ext.indexOf('htm') == 0) {
+                            if (req.parsedUrl.query["_c9_id"]) {
+                                /* inject preview stuff */
+                                var generateInstrumentedHTML = require("../c9.ide.language.html.diff/HTMLSimpleDOM").generateInstrumentedHTML;
+                                
+                                fs.readFile(actual_path, function(err, data) {
+                                    if (err) {
+                                        res.end('Error reading file');
+                                    }
+                                    
+                                    data = generateInstrumentedHTML(data.toString('utf8')) || "";
+                                    let inject = '<script src="' + staticPrefix + '/preview/livecss.js"></script>';
+                                    
+                                    res.writeHead(200, {
+                                        "content-length": data.length + inject.length,
+                                        "content-type": "text/html",
+                                        "x-robots-tag": "noindex, nofollow"
+                                    });
+                                    res.write(data);
+                                    res.end(inject);
+                                });
+                                return;
+                            }
+                        }
+
+                        let rstream = fs.createReadStream(actual_path);
+                        rstream.on('error', function() {
+                            res.end("Error reading file");
+                        });
+                        let contentType = "application/octet-stream";
+                        switch (file_ext) {
+                            case 'htm':
+                            case 'html':
+                                contentType = 'text/html';
+                                break;
+                            case 'txt':
+                            case 'log':
+                                contentType = 'text/plain';
+                                break;
+                            case 'js':
+                                contentType = 'text/javascript';
+                                break;
+                            case 'css':
+                                contentType = 'text/css';
+                                break;
+                            case 'json':
+                                contentType = 'application/json';
+                                break;
+                            case 'png':
+                                contentType = 'image/png';
+                                break;      
+                            case 'jpg':
+                                contentType = 'image/jpg';
+                                break;
+                            case 'wav':
+                                contentType = 'audio/wav';
+                                break;
+                        }
+                        res.writeHead(200, {
+                            'Content-Type': contentType
+                        });
+                        rstream.pipe(res);
+                    } else if (stats.isDirectory()) {
+                        fs.readdir(actual_path, {withFileTypes: true}, function(err, files) {
+                            if (err) {
+                                return res.end('Error');
+                            }
+                            let entries = [];
+                            
+                            for (var i = 0; i < files.length; i++) {
+                                entries.push({
+                                    mime: files[i].isDirectory() ? 'inode/directory' : 'application/octet-stream',
+                                    size: 0,
+                                    name: files[i].name + (files[i].isDirectory() ? '/' : '')
+                                });
+                            }
+                            
+                            res.render(__dirname + "/views/listing.html.ejs", {
+                                isRoot: req.params.path == "/",
+                                entries: entries
+                            }, next);
+                        });
+                    } else {
+                        return next(new error.Unauthorized("Invalid type of file"));
+                    }
+                });
+                /*
                 function serveHtml(request, ideHost, req) {
                     debug("serve HTML %s", request.url);
-                    
+
                     var shouldInject = req.parsedUrl.query["_c9_id"] ? true : false;
                     
                     var inject = shouldInject
@@ -354,8 +454,13 @@ define(function(require, exports, module) {
                         request.headers["Cache-Control"] = "max-age=31536000,no-cache";
                     res.writeHead(request.statusCode, request.headers);
                     request.pipe(res);
+                    res.on('end', function() {
+                        console.trace("SERVEFILE RX END");
+                    });
+                    
+                    console.log("File response ended");
                 }
-                
+                */
             };
         }
         

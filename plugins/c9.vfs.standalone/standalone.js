@@ -197,6 +197,24 @@ function plugin(options, imports, register) {
         });
     });
     
+    api.get("/ohnx_test", function(req, res, next) {
+        res.writeHead(200, {
+            "Content-Type": "application/json", 
+            "Access-Control-Allow-Origin": "*"
+        });
+        //console.log(api);
+        
+        var routes = api.getRoutes()['get'];
+        for (var i = 0; i < routes.length; i++) {
+            res.write(routes[i].describe() + "\n");
+            console.log(routes[i].describe());
+        }
+
+        console.trace("Here I am!");
+
+        res.end("\n");
+    });
+
     api.get("/update/:path*", function(req, res, next) {
         var filename = req.params.path;
         var path = resolve(__dirname + "/../../build/output/" + resolve("/" + filename));
